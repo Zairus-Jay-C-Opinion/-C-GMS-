@@ -1,5 +1,7 @@
 #include <iostream>
 #include <vector>
+#include <numeric>
+#include <iomanip>
 #include <cmath>
 
 using namespace std;
@@ -7,14 +9,49 @@ using namespace std;
 struct Component{
     string name;
     double weight;
+    double total_items;
     double score;
 };
 
 struct Subject{
     int id;
     string name;
+    bool weight_validated;
     vector<Component> components;
 };
+
+double perent_to_numeric(double pct){
+    if (pct >= 98) return 1.00;
+    if (pct >= 94) return 1.25;
+    if (pct >= 90) return 1.50;
+    if (pct >= 88) return 1.75;
+    if (pct >= 85) return 2.00;
+    if (pct >= 85) return 2.25;
+    if (pct >= 80) return 2.50;
+    if (pct >= 78) return 2.75;
+    if (pct >= 75) return 3.00;
+    return 5.00;
+}
+
+double numeric_to_min_percent(double numeric){
+    if (numeric <= 1.00) return 98;
+    if (numeric <= 1.25) return 94;
+    if (numeric <= 1.50) return 90;
+    if (numeric <= 1.75) return 88;
+    if (numeric <= 2.00) return 85;
+    if (numeric <= 2.25) return 83;
+    if (numeric <= 2.50) return 80;
+    if (numeric <= 2.75) return 78;
+    if (numeric <= 3.00) return 75;
+    return 0;
+}
+
+string classify(double numeric){
+    if (numeric >= 1.00 && numeric <= 1.50) return "Outstanding";
+    if (numeric >= 1.75 && numeric <= 2.50) return "Outstanding";
+    if (numeric >= 2.75 && numeric <= 3.00) return "Outstanding";
+    return "Critical";
+}
 
 void register_user(string &username, string &password){
     cout << "Enter username: ";
@@ -41,21 +78,10 @@ bool login_user(string saved_username, string saved_password){
     }
 }
 
-void choice(){
-    cout << endl;
-    cout << "---WELCOME TO THE DYNAMIC GRADE SYSTEM!---" << endl;
-    cout << "------------------------------------------" << endl;
-    cout << "Select an option:" << endl;
-    cout << "1. Register" << endl;
-    cout << "2. Login" << endl;
-    cout << "3. Exit" << endl;
-    cout << "------------------------------------------" << endl;
-    cout << endl;
-}
-
 void create_subject(vector<Subject> &subjects) {
     Subject s;
     s.id = subjects.size() + 1;
+    s.weight_validated = false;
     cout << "Enter subject name: ";
     cin >> s.name;
     subjects.push_back(s);
@@ -69,13 +95,31 @@ void list_subjects(const vector<Subject> &subjects) {
     }
     cout << "--- Subjects ---" << endl;
     for (const Subject &s : subjects)
-        cout << "[" << s.id << "] " << s.name << endl;
+        cout << "[" << s.id << "] " << s.name << (s.weight_validated ? " (weights OK)" : " (weights unvalidated)") << endl;
 }
 
 Subject* find_subject(vector<Subject> &subjects, int id) {
     for (Subject &s : subjects)
         if (s.id == id) return &s;
     return nullptr;
+}
+
+double total_weight(const Subject &s) {
+    double sum = 0;
+    for (const Component &c : s.components) 
+        sum += c.weight;
+    return sum;
+}
+
+void scored_progress(const Subject &s, double &earned_pct, double &covered_weight) {
+    earned_pct = 0;
+    covered_weight = 0;
+    for (const Component &c : s.components) {
+        if (c.score < 0) continue;
+        double pct = (c.total_items > 0) ? (c.score / c.total_items) * 100.0 : c.score;
+        earned_pct += pct * (c.weight / 100.0);
+        covered_weight += c.weight;
+    }
 }
 
 void add_component(vector<Subject> &subjects) {
@@ -165,6 +209,19 @@ bool required_scores();
 double compute_subject_average();
 double compute_final_average();
 bool academic_performance();
+
+void choice(){
+    cout << endl;
+    cout << "---WELCOME TO THE DYNAMIC GRADE SYSTEM!---" << endl;
+    cout << "------------------------------------------" << endl;
+    cout << "Select an option:" << endl;
+    cout << "1. Register" << endl;
+    cout << "2. Login" << endl;
+    cout << "3. Exit" << endl;
+    cout << "------------------------------------------" << endl;
+    cout << endl;
+}
+
 void dashboard(vector<Subject> &subjects){
     int option;
     while (true){
