@@ -272,7 +272,89 @@ void add_scores(vector<Subject> &subjects){
     cout << "Score saved for '" << c.name << "' successfully!" << endl;
 }
 
-bool required_scores();
+void required_scores(vector<Subject> &subjects){
+    if (subjects.empty()) {
+        cout << "No subjects found." << endl;
+        return;
+    }
+
+    list_subjects(subjects);
+    cout << "Enter subject ID: ";
+    int subject_id;
+    cin >> subject_id;
+
+    Subject *s = find_subject(subjects, subject_id);
+    if (!s) {
+        cout << "Subject not found." << endl;
+        return;
+    }
+    if(!s->weight_validated) {
+        cout << "Weights not yet validated for '" << s->name << "'."<< endl;    
+        return;
+    }
+
+    bool any_scored = false;
+    for (const Component &c : s->components){
+        if (c.score >0){
+            any_scored = true;
+            break;
+        }
+    }
+    if(!any_scored){
+        cout << "No scores enetered yet for '" << s->name << "'." << endl;
+        return;
+    }
+
+    cout << "Enter target numeric grade (1.00 - 5.00): ";
+    double target_numeric;
+    cin >> target_numeric;
+
+    double target_pct = numeric_to_min_percent(target_numeric);
+
+    double earned_pct, covered_weight;
+    scored_progress(*s, earned_pct, covered_weight);
+    double remaining_weight = 100.0 - covered_weight;
+
+    if (remaining_weight <= 0){
+        cout << "All components already scored. Use compute subject average instead." << endl;
+        return;
+    }
+
+    double needed_pct = (target_pct - earned_pct) / (remaining_weight * 100.0);
+
+    cout << fixed << setprecision(2);
+    cout << endl;
+    cout << "Target grade  : " << target_numeric << " (min" << target_pct << "%)" << endl;
+    cout << "Current earned: " << earned_pct << "%/ " << covered_weight << "% weight" << endl;
+    cout << "Remaining     : " << remaining_weight << "% weight" << endl;
+    cout << endl;
+
+    if (needed_pct > 100){
+        cout << "Target grade " << target_numeric << " may no longer achievable." << endl;
+        cout << "You would need " << needed_pct << "% on remaining components, which exceeds 100%." << endl;
+        return;
+    }
+    if (needed_pct < 0){
+        cout << "Target grade " << target_numeric << " is already guranteed regardless of remaining scores." << endl;
+        return;
+    }
+
+    cout << "--- Required Scores for Remaining Components ---" << endl;
+    for (const Component &c : s-> components){
+        if (c.score >= 0){
+            continue;
+        }
+        cout << c.name << " (" << c.weight << "%):" << endl;
+        if (c.total_items > 0){
+            double raw = (needed_pct / 100.0) * c.total_items;
+            cout << "  Need " << needed_pct << "% -> raw score of at least " << raw << " / " << c.total_items << endl;
+        }
+        else{
+            cout << "  Need at least " << needed_pct << "%" << endl;
+        }
+    }
+}
+
 void compute_subject_average(vector<Subject> &subjects){
     if (subjects.empty()){
         cout << "No subjects found. Create a subject first." << endl;
@@ -397,7 +479,63 @@ void compute_final_average(vector<Subject> &subjects){
 }
 
 
-bool academic_performance();
+void academic_performance(vector<Subject> &subjects){
+    if (subjects.empty()){
+        cout << "No subjects found. Create a subject first." << endl;
+        return;
+    }
+
+    cout << fixed << setprecision(2);
+    cout << "--- Academic Performance ---" << endl;
+
+    vector<double> final_grades;
+
+    for (const Subject &s : subjects){
+        cout << endl << "Subject: " << s.name << endl;
+
+        if (!s.weight_validated){
+            cout << "  Status: weights not validated" << endl;
+            continue;
+        }
+
+        bool all_scored = true;
+        double weighted_sum = 0;
+
+        for (const Component &c : s.components){
+            if (c.score < 0){
+                all_scored = false;
+                break;
+            }
+            double pct = (c.total_items > 0) ? (c.score / c.total_items) * 100.0 : c.score;
+            weighted_sum += pct * (c.weight / 100.0);
+        }
+
+        if (!all_scored){
+            double earned_pct, covered_weight;
+            scored_progress(s, earned_pct, covered_weight);
+            cout << "  Status   : in progress (" << covered_weight << "% of weight scored)" << endl;
+            cout << "  Earned   : " << earned_pct << "%" << endl;
+            continue;
+        }
+
+        double numeric = percent_to_numeric(weighted_sum);
+        final_grades.push_back(numeric);
+        cout << "  Weighted Average: " << weighted_sum << "%" << endl;
+        cout << "  Numeric Grade   : " << numeric << endl;
+        cout << "  Performance     : " << classify(numeric) << endl;
+    }
+
+    if(!final_grades.empty()){
+        double avg = 0;
+        for (double g : final_grades) avg += g;
+        avg /= final_grades.size();
+
+        cout << endl;
+        cout << "=== Overall Final Average ===" << endl;
+        cout << "Average : " << avg << endl;
+        cout << "Performance: " << classify(avg) << endl;
+    }
+}
 
 void choice(){
     cout << endl;
@@ -418,10 +556,13 @@ void dashboard(vector<Subject> &subjects){
         cout << "---DASHBOARD---" << endl;
         cout << "1. Create Subject" << endl;
         cout << "2. Add Component" << endl;
-        cout << "3. Add Scores" << endl;
-        cout << "4. Required Scores" << endl;
-        cout << "5. Academic Performance" << endl;
-        cout << "6. Logout" << endl;
+        cout << "3. Valiate Weights" << endl;
+        cout << "4. Add Scores" << endl;
+        cout << "5. Required Scores" << endl;
+        cout << "6. Subject Average" << endl;
+        cout << "7. Final Average" << endl;
+        cout << "8. Academic Performance" << endl;
+        cout << "9. Logout" << endl;
         cout << "Select an option: ";
         cin >> option;
 
@@ -433,17 +574,25 @@ void dashboard(vector<Subject> &subjects){
                 add_component(subjects);
                 break;
             case 3:
-                add_scores(subjects);
+                validate_weight(subjects);
                 break;
             case 4:
-                required_scores();
+                add_scores(subjects);
                 break;
             case 5:
-                academic_performance();
+                required_scores(subjects);
                 break;
             case 6:
+                compute_subject_average(subjects);
+                break;
+            case 7:
+                compute_final_average(subjects);
+                break;
+            case 8:
+                academic_performance(subjects);
+                break;
+            case 9:
                 cout << "Logging out..." << endl;
-                return;
             default:
                 cout << "Invalid option!" << endl;
         }
