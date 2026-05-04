@@ -139,7 +139,7 @@ void add_component(vector<Subject> &subjects) {
     }
 
     if (s->weight_validated){
-        cout << "Weights already validated for '" << s->name << "'. Cannotadd more components." << endl;
+        cout << "Weights already validated for '" << s->name << "'. Cannot add more components." << endl;
         return;
     }
 
@@ -295,7 +295,7 @@ void required_scores(vector<Subject> &subjects){
 
     bool any_scored = false;
     for (const Component &c : s->components){
-        if (c.score >0){
+        if (c.score >= 0){
             any_scored = true;
             break;
         }
@@ -322,10 +322,6 @@ void required_scores(vector<Subject> &subjects){
     cin >> target_numeric;
 
     double target_pct = numeric_to_min_percent(target_numeric);
-
-    double earned_pct, covered_weight;
-    scored_progress(*s, earned_pct, covered_weight);
-    double remaining_weight = 100.0 - covered_weight;
 
     if (remaining_weight <= 0){
         cout << "All components already scored. Use compute subject average instead." << endl;
@@ -394,7 +390,7 @@ void compute_subject_average(vector<Subject> &subjects){
 
     bool any_scored = false;
     for (const Component &c : s->components){
-        if (c.score >0){
+        if (c.score >= 0){
             any_scored = true;
             break;
         }
