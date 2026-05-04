@@ -26,7 +26,7 @@ double percent_to_numeric(double pct){
     if (pct >= 90) return 1.50;
     if (pct >= 88) return 1.75;
     if (pct >= 85) return 2.00;
-    if (pct >= 85) return 2.25;
+    if (pct >= 83) return 2.25;
     if (pct >= 80) return 2.50;
     if (pct >= 78) return 2.75;
     if (pct >= 75) return 3.00;
@@ -48,8 +48,8 @@ double numeric_to_min_percent(double numeric){
 
 string classify(double numeric){
     if (numeric >= 1.00 && numeric <= 1.50) return "Outstanding";
-    if (numeric >= 1.75 && numeric <= 2.50) return "Outstanding";
-    if (numeric >= 2.75 && numeric <= 3.00) return "Outstanding";
+    if (numeric >= 1.75 && numeric <= 2.50) return "Safe";
+    if (numeric >= 2.75 && numeric <= 3.00) return "At Risk";
     return "Critical";
 }
 
@@ -263,7 +263,7 @@ void add_scores(vector<Subject> &subjects){
     cin >> c.score;
 
     double max_val = (c.total_items > 0) ? c.total_items : 100;
-    if (c.score < 0 || c.score > 100){
+    if (c.score < 0 || c.score > max_val){
         cout << "Invalid score!" << endl;
         c.score = -1;
         return;
@@ -305,6 +305,18 @@ void required_scores(vector<Subject> &subjects){
         return;
     }
 
+    double earned_pct, covered_weight;
+    scored_progress(*s, earned_pct, covered_weight);
+    double remaining_weight = 100.0 - covered_weight;
+
+    double max_possible_pct = earned_pct + (100.0 * (remaining_weight / 100.0));
+    double max_numeric = percent_to_numeric(max_possible_pct);
+
+    cout << fixed << setprecision(2);
+    cout << "Best possible weighted average : " << max_possible_pct << "%" << endl;
+    cout << "Best possible numeric grade    : " << max_numeric << " (" << classify(max_numeric) << ")" << endl;
+    cout << endl;
+
     cout << "Enter target numeric grade (1.00 - 5.00): ";
     double target_numeric;
     cin >> target_numeric;
@@ -332,6 +344,7 @@ void required_scores(vector<Subject> &subjects){
     if (shared_pct > 100){
         cout << "Target grade " << target_numeric << " may no longer achievable." << endl;
         cout << "You would need " << shared_pct << "% on remaining components, which exceeds 100%." << endl;
+        cout << "Best possible grade is " << max_numeric << " (" << classify(max_numeric) << ")." << endl;
         return;
     }
     if (shared_pct < 0){
@@ -341,7 +354,7 @@ void required_scores(vector<Subject> &subjects){
 
     cout << "To achieve target grade " << target_numeric << ", you need an average of at least " << shared_pct << "% on remaining components." << endl;
     cout << endl;
-    
+
     cout << "--- Required Scores for Remaining Components ---" << endl;
     for (const Component &c : s-> components){
         if (c.score >= 0){
@@ -409,8 +422,10 @@ void compute_subject_average(vector<Subject> &subjects){
         covered += c.weight;
         cout << c.score;
         if (c.total_items > 0){
-            cout << "/" << pct << "% -> contributes " << contribution << "%" << endl;
-
+            cout << "/" << c.total_items << " = " << pct << "% -> contributes " << contribution << "%" << endl;
+        }
+        else{
+            cout << "% -> contributes " << contribution << "%" << endl;
         }
     }
 
@@ -596,6 +611,7 @@ void dashboard(vector<Subject> &subjects){
                 break;
             case 9:
                 cout << "Logging out..." << endl;
+                return;
             default:
                 cout << "Invalid option!" << endl;
         }
@@ -621,8 +637,6 @@ int main(){
                 continue;
             }
             else{
-                login_user(username, password);
-
                 int attempts = 3;
                 bool success = false;
 
