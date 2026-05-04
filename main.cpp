@@ -3,6 +3,7 @@
 #include <numeric>
 #include <iomanip>
 #include <cmath>
+#include<string>
 
 using namespace std;
 
@@ -83,7 +84,8 @@ void create_subject(vector<Subject> &subjects) {
     s.id = subjects.size() + 1;
     s.weight_validated = false;
     cout << "Enter subject name: ";
-    cin >> s.name;
+    cin.ignore();
+    getline(cin, s.name);
     subjects.push_back(s);
     cout << "Subject '" << s.name << "' created with ID " << s.id << "." << endl;
 }
@@ -93,9 +95,11 @@ void list_subjects(const vector<Subject> &subjects) {
         cout << "No subjects found." << endl;
         return;
     }
+    cout << endl;
     cout << "--- Subjects ---" << endl;
     for (const Subject &s : subjects)
         cout << "[" << s.id << "] " << s.name << (s.weight_validated ? " (weights OK)" : " (weights unvalidated)") << endl;
+    cout << endl;
 }
 
 Subject* find_subject(vector<Subject> &subjects, int id) {
@@ -231,6 +235,7 @@ void add_scores(vector<Subject> &subjects){
         return;
     }
 
+    cout << endl;
     cout << "---Components in " << s->name << " ---" << endl;
     for (int i = 0; i < s->components.size(); i++){
         const Component &c = s->components[i];
@@ -243,7 +248,7 @@ void add_scores(vector<Subject> &subjects){
         }
         cout << ")" << endl;
     }
-
+    cout << endl;
     cout << "Enter component number to add score to: ";
     int comp_num;
     cin >> comp_num;
@@ -332,8 +337,8 @@ void required_scores(vector<Subject> &subjects){
 
     cout << fixed << setprecision(2);
     cout << endl;
-    cout << "Target grade  : " << target_numeric << " (min" << target_pct << "%)" << endl;
-    cout << "Current earned: " << earned_pct << "%/ " << covered_weight << "% weight" << endl;
+    cout << "Target grade  : " << target_numeric << " (min " << target_pct << "%)" << endl;
+    cout << "Current earned: " << earned_pct << "% / " << covered_weight << "% weight" << endl;
     cout << "Remaining     : " << remaining_weight << "% weight" << endl;
     cout << endl;
 
@@ -570,13 +575,14 @@ void dashboard(vector<Subject> &subjects){
         cout << "---DASHBOARD---" << endl;
         cout << "1. Create Subject" << endl;
         cout << "2. Add Component" << endl;
-        cout << "3. Valiate Weights" << endl;
+        cout << "3. Validate Weights" << endl;
         cout << "4. Add Scores" << endl;
         cout << "5. Required Scores" << endl;
         cout << "6. Subject Average" << endl;
         cout << "7. Final Average" << endl;
         cout << "8. Academic Performance" << endl;
         cout << "9. Logout" << endl;
+        cout << "----------------" << endl;
         cout << "Select an option: ";
         cin >> option;
 
@@ -647,6 +653,7 @@ int main(){
 
                 if (success){
                     dashboard(subjects);
+                    cout << "Exiting..." << endl;
                 }
                 else{
                     cout << "Too many failed attempts! Exiting..." << endl;
