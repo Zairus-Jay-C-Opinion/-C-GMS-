@@ -301,7 +301,7 @@ void required_scores(vector<Subject> &subjects){
         }
     }
     if(!any_scored){
-        cout << "No scores enetered yet for '" << s->name << "'." << endl;
+        cout << "Enter at least one score before using required scores." << endl;
         return;
     }
 
@@ -320,7 +320,7 @@ void required_scores(vector<Subject> &subjects){
         return;
     }
 
-    double needed_pct = (target_pct - earned_pct) / (remaining_weight * 100.0);
+    double shared_pct = (target_pct - earned_pct) / (remaining_weight / 100.0);
 
     cout << fixed << setprecision(2);
     cout << endl;
@@ -329,16 +329,19 @@ void required_scores(vector<Subject> &subjects){
     cout << "Remaining     : " << remaining_weight << "% weight" << endl;
     cout << endl;
 
-    if (needed_pct > 100){
+    if (shared_pct > 100){
         cout << "Target grade " << target_numeric << " may no longer achievable." << endl;
-        cout << "You would need " << needed_pct << "% on remaining components, which exceeds 100%." << endl;
+        cout << "You would need " << shared_pct << "% on remaining components, which exceeds 100%." << endl;
         return;
     }
-    if (needed_pct < 0){
+    if (shared_pct < 0){
         cout << "Target grade " << target_numeric << " is already guranteed regardless of remaining scores." << endl;
         return;
     }
 
+    cout << "To achieve target grade " << target_numeric << ", you need an average of at least " << shared_pct << "% on remaining components." << endl;
+    cout << endl;
+    
     cout << "--- Required Scores for Remaining Components ---" << endl;
     for (const Component &c : s-> components){
         if (c.score >= 0){
@@ -346,11 +349,11 @@ void required_scores(vector<Subject> &subjects){
         }
         cout << c.name << " (" << c.weight << "%):" << endl;
         if (c.total_items > 0){
-            double raw = (needed_pct / 100.0) * c.total_items;
-            cout << "  Need " << needed_pct << "% -> raw score of at least " << raw << " / " << c.total_items << endl;
+            double raw = (shared_pct / 100.0) * c.total_items;
+            cout << "  Need " << shared_pct << "% -> raw score of at least " << raw << " / " << c.total_items << endl;
         }
         else{
-            cout << "  Need at least " << needed_pct << "%" << endl;
+            cout << "  Need at least " << shared_pct << "%" << endl;
         }
     }
 }
