@@ -20,7 +20,7 @@ struct Subject{
     vector<Component> components;
 };
 
-double perent_to_numeric(double pct){
+double percent_to_numeric(double pct){
     if (pct >= 98) return 1.00;
     if (pct >= 94) return 1.25;
     if (pct >= 90) return 1.50;
@@ -138,7 +138,15 @@ void add_component(vector<Subject> &subjects) {
         return;
     }
 
+    if (s->weight_validated){
+        cout << "Weights already validated for '" << s->name << "'. Cannotadd more components." << endl;
+        return;
+    }
+
     Component c;
+    c.score = -1;
+    c.total_items = 0;
+
     cout << "Enter component name: ";
     cin >> c.name;
     cout << "Enter component weight (0-100): ";
@@ -149,12 +157,58 @@ void add_component(vector<Subject> &subjects) {
         return;
     }
 
-    c.score = -1;
+    double current = total_weight(*s);
+    if (current + c.weight > 100) {
+        cout << "Adding this weight (" << c.weight << "%) would exceed 100%." << " Current total: " << current << "%. Remaining: " << (100 - current) << "%." << endl;
+        return;
+
+    }  
+    
+    cout << "Enter total items for '" << c.name << "' (0 if not defined): ";
+    cin >> c.total_items;
+
     s->components.push_back(c);
-    cout << "Component '" << c.name << "' added to subject '" << s->name << "' successfully!" << endl;
+    cout << "Component '" << c.name << "' added to subject '" << s->name << "' successfully! " << "Current total weight: " << total_weight(*s) << "%." << endl;
 }
 
-bool validate_weight();
+void validate_weight(vector<Subject> &subjects){
+    if (subjects.empty()) {
+        cout << "No subjects found. Create a subject first." << endl;
+        return;
+    }
+
+    list_subjects(subjects);
+    cout << "Enter subject ID to validate: ";
+    int subject_id;
+    cin >> subject_id;
+
+    Subject *s = find_subject(subjects, subject_id);
+    if (!s) {
+        cout << "Subjects not found." << endl;
+        return;
+    }
+    if (s->components.empty()){
+        cout << "No components added yet." << endl;
+        return;
+    }
+    if (s->weight_validated){
+        cout << "Already validated." << endl;
+        return;
+    }
+
+    double tw = total_weight(*s);
+    if (tw != 100.0){
+        cout << fixed << setprecision(2);
+        cout << "Cannot validate. Total weight is " << tw << "%. Must be exactly 100%." << endl;
+        cout << "Components:" << endl;
+        for (const Component &c : s->components){
+            cout << " " << c.name << " - " <<c.weight << "%" << endl;
+        }
+        return;
+    }
+    s->weight_validated = true;
+    cout << "Weights validated for '" << s->name << "'! You may now add scores." << endl;
+}
 
 void add_scores(vector<Subject> &subjects){
     if (subjects.empty()){
@@ -172,15 +226,22 @@ void add_scores(vector<Subject> &subjects){
         cout << "Subject not found." << endl;
         return;
     }
-
-    if (s->components.empty()){
-        cout << "No components in '" << s->name << "'. Add a component first." << endl;
+    if(!s->weight_validated) {
+        cout << "Weights not yet validated for '" << s->name << "'. Validate weights before adding scores." << endl;    
         return;
     }
 
     cout << "---Components in " << s->name << " ---" << endl;
     for (int i = 0; i < s->components.size(); i++){
-        cout << "[" << i + 1 << "] " << s->components[i].name << endl;
+        const Component &c = s->components[i];
+        cout << "[" << i + 1 << "] " << c.name << " (weight: " << c.weight << "%";
+        if (c.total_items > 0){
+            cout << ", total items: " << c.total_items;
+        }
+        if (c.score >= 0){
+            cout << ", score: " << c.score;
+        }
+        cout << ")" << endl;
     }
 
     cout << "Enter component number to add score to: ";
@@ -193,21 +254,149 @@ void add_scores(vector<Subject> &subjects){
     }
 
     Component &c = s -> components[comp_num - 1];
-    cout << "Enter score for '" << c.name << "' (0-100): ";
+    if (c.total_items > 0){
+        cout << "Enter raw score for '" << c.name << "' (0- " << c.total_items << "): ";
+    }
+    else{
+        cout << "Enter percentage score for '" << c.name << "' (0-100): ";
+    }
     cin >> c.score;
 
+    double max_val = (c.total_items > 0) ? c.total_items : 100;
     if (c.score < 0 || c.score > 100){
         cout << "Invalid score!" << endl;
         c.score = -1;
         return;
     }
 
-    cout << "Score of " << c.score << " added to component '" << c.name << "' successfully!" << endl;
+    cout << "Score saved for '" << c.name << "' successfully!" << endl;
 }
 
 bool required_scores();
-double compute_subject_average();
-double compute_final_average();
+void compute_subject_average(vector<Subject> &subjects){
+    if (subjects.empty()){
+        cout << "No subjects found. Create a subject first." << endl;
+        return;
+    }
+
+    list_subjects(subjects);
+    cout << "Enter subject ID to compute average for: ";
+    int subject_id;
+    cin >> subject_id;
+
+    Subject *s = find_subject(subjects, subject_id);
+    if(!s){
+         cout << "Subject not found." << endl;
+        return;
+    }
+    if(!s->weight_validated) {
+        cout << "Weights not yet validated for '" << s->name << "'."<< endl;    
+        return;
+    }
+
+    bool any_scored = false;
+    for (const Component &c : s->components){
+        if (c.score >0){
+            any_scored = true;
+            break;
+        }
+    }
+    if(!any_scored){
+        cout << "No scores enetered yet for '" << s->name << "'." << endl;
+        return;
+    }
+
+    cout << fixed << setprecision(2);
+    cout << "--- " << s->name << " Score Breakdown ---" << endl;
+
+    double weighted_sum = 0;
+    double covered = 0;
+
+    for (const Component &c : s->components){
+        cout << c.name << " (" << c.weight << "%): ";
+        if (c.score < 0){
+            cout << "No score yet" << endl;
+            continue;
+        }
+        double pct = (c.total_items > 0) ? (c.score / c.total_items) * 100.0 : c.score;
+        double contribution = pct * (c.weight / 100.0);
+        weighted_sum += contribution;
+        covered += c.weight;
+        cout << c.score;
+        if (c.total_items > 0){
+            cout << "/" << pct << "% -> contributes " << contribution << "%" << endl;
+
+        }
+    }
+
+    cout << endl;
+    cout << "Weighted average (scored components only): " << weighted_sum << "%" << endl;
+
+    if (covered >= 100.0){
+        double numeric = percent_to_numeric(weighted_sum);
+        cout << "Numeric grade : " << numeric << endl;
+        cout << "Performance   : " << classify(numeric) << endl;
+    }
+    else{
+        cout << "(" << (100-covered) << "% of weight not yet scored)" << endl;
+    }
+}
+
+void compute_final_average(vector<Subject> &subjects){
+    if (subjects.empty()){
+        cout << "No subjects found. Create a subject first." << endl;
+        return;
+    }
+
+    vector<double> numeric_grades;
+    cout << fixed << setprecision(2);
+    cout << "--- Final Average ---" << endl;
+
+    for (const Subject &s : subjects){
+        if (!s.weight_validated){
+            cout << s.name << ": weights not validated, skipped." << endl;
+            continue;        
+        }
+
+        bool all_scored = true;
+        for(const Component &c : s.components){
+            if (c.score < 0){
+                all_scored = false;
+                break;
+            }
+        }
+
+        if (!all_scored){
+            cout << s.name << ": has unscored components, skipped." << endl;
+            continue;
+        }
+
+        double weighted_sum = 0;
+        for(const Component &c : s.components){
+            double pct = (c.total_items > 0) ? (c.score / c.total_items) * 100.0 : c.score;
+            weighted_sum += pct * (c.weight / 100.0);
+        }
+
+        double numeric = percent_to_numeric(weighted_sum);
+        cout << s.name << ": " << weighted_sum << "% -> " << numeric << endl;
+        numeric_grades.push_back(numeric);
+    }
+
+    if (numeric_grades.empty()){
+        cout << "No fully scored subjects to compute final average." << endl;
+        return;
+    }
+
+    double final_avg = 0;
+    for (double g : numeric_grades) final_avg += g;
+    final_avg /= numeric_grades.size();
+
+    cout << endl;
+    cout << "Final Average: " << final_avg << endl;
+    cout << "Performance  : " << classify(final_avg) << endl;
+}
+
+
 bool academic_performance();
 
 void choice(){
