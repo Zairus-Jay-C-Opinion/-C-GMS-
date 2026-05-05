@@ -263,7 +263,11 @@ void add_scores(vector<Subject> &subjects){
         cout << "Enter raw score for '" << c.name << "' (0- " << c.total_items << "): ";
     }
     else{
-        cout << "Enter percentage score for '" << c.name << "' (0-100): ";
+        cout << "Enter total items for '" << c.name << "': ";
+        cin >> c.total_items;
+        if (c.total_items > 0){
+            cout << "Enter raw score for '" << c.name << "' (0 - " << c.total_items << "): ";
+        }
     }
     cin >> c.score;
 
@@ -274,7 +278,16 @@ void add_scores(vector<Subject> &subjects){
         return;
     }
 
+    double pct;
+    if (c.total_items > 0){
+        pct = (c.score / c.total_items) * 100.0;
+    }
+    else{
+        pct = c.score;
+    }
+    double contribution = pct * (c.weight / 100);
     cout << "Score saved for '" << c.name << "' successfully!" << endl;
+    cout << "Contribution: " << contribution << "%/" << c.weight << "%" << endl;
 }
 
 void required_scores(vector<Subject> &subjects){
@@ -361,13 +374,14 @@ void required_scores(vector<Subject> &subjects){
         if (c.score >= 0){
             continue;
         }
+        double required_contribution = shared_pct * (c.weight / 100.0);
         cout << c.name << " (" << c.weight << "%):" << endl;
         if (c.total_items > 0){
             double raw = (shared_pct / 100.0) * c.total_items;
-            cout << "  Need " << shared_pct << "% -> raw score of at least " << raw << " / " << c.total_items << endl;
+            cout << "  Score at least " << raw << " / " << c.total_items << " (" << shared_pct << "%)" << endl;
         }
         else{
-            cout << "  Need at least " << shared_pct << "%" << endl;
+            cout << "  Score at least " << required_contribution << "% / " << c.weight << "%" << endl;
         }
     }
 }
