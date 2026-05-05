@@ -1,4 +1,4 @@
-# Dynamic Grade System (DGS)
+# Grade Monitoring System (GMS)
 A console-based grade monitoring program written in C++ that allows students to track their academic performance across multiple subjects, compute weighted averages, and project the scores needed to reach a target grade.
 
 ---
